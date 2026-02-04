@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Fácil Corrigido</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #70c5ce;
+      touch-action: manipulation;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .gameover {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      text-align: center;
+      font-size: 26px;
+      color: white;
+      text-shadow: 2px 2px 4px #000;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="gameover" id="gameOverText">
+    GAME OVER<br>
+    Toque para reiniciar
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const gameOverText = document.getElementById("gameOverText");
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Passarinho
+    const bird = {
+      x: canvas.width * 0.25,
+      y: canvas.height / 2,
+      r: 18,
+      v: 0
+    };
+
+    // Física (bem tranquila)
+    const gravity = 0.4;
+    const jump = -7;
+
+    // Canos
+    const pipeWidth = 70;
+    const gap = 280; // espaço GRANDE garantido
+    const minPipeHeight = 80; // nunca deixa fechar
+    let pipeSpeed = 2;
+    let pipes = [];
+
+    let score = 0;
+    let gameOver = false;
+
+    function resetGame() {
+      bird.y = canvas.height / 2;
+      bird.v = 0;
+      pipes = [];
+      score = 0;
+      pipeSpeed = 2;
+      gameOver = false;
+      gameOverText.style.display = "none";
+    }
+
+    function createPipe() {
+      const maxTop =
+        canvas.height - gap - minPipeHeight;
+
+      const top = Math.random() * maxTop + minPipeHeight;
+
+      pipes.push({
+        x: canvas.width,
+        top,
+        passed: false
+      });
+    }
+
+    function drawBird() {
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "green";
+      pipes.forEach(p => {
+        // Cano de cima
+        ctx.fillRect(p.x, 0, pipeWidth, p.top);
+
+        // Cano de baixo
+        ctx.fillRect(
+          p.x,
+          p.top + gap,
+          pipeWidth,
+          canvas.height
+        );
+      });
+    }
+
+    function updatePipes() {
+      pipes.forEach(p => {
+        p.x -= pipeSpeed;
+
+        // Pontuação
+        if (!p.passed && p.x + pipeWidth < bird.x) {
+          p.passed = true;
+          score++;
+        }
+
+        // Colisão
+        if (
+          bird.x + bird.r > p.x &&
+          bird.x - bird.r < p.x + pipeWidth &&
+          (bird.y - bird.r < p.top ||
+           bird.y + bird.r > p.top + gap)
+        ) {
+          gameOver = true;
+        }
+      });
+
+      pipes = pipes.filter(p => p.x + pipeWidth > 0);
+    }
+
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "28px Arial";
+      ctx.fillText("Pontos: " + score, 20, 40);
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!gameOver) {
+        bird.v += gravity;
+        bird.y += bird.v;
+
+        if (bird.y - bird.r < 0 || bird.y + bird.r > canvas.height) {
+          gameOver = true;
+        }
+
+        // Canos MAIS DISTANTES entre si
+        if (Math.random() < 0.008) createPipe();
+
+        updatePipes();
+        drawPipes();
+        drawBird();
+        drawScore();
+
+        requestAnimationFrame(update);
+      } else {
+        gameOverText.style.display = "block";
+      }
+    }
+
+    function flap() {
+      if (!gameOver) {
+        bird.v = jump;
+      } else {
+        resetGame();
+        update();
+      }
+    }
+
+    // Controles
+    canvas.addEventListener("click", flap);
+    canvas.addEventListener("touchstart", e => {
+      e.preventDefault();
+      flap();
+    });
+
+    document.addEventListener("keydown", e => {
+      if (e.code === "Space") flap();
+    });
+
+    update();
+  </script>
+
+</body>
+</html>
